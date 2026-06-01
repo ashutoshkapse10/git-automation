@@ -1,17 +1,15 @@
 import React, { useState, useEffect } from "react";
-
-// 🚨 Hardcoded secret (security issue)
-const API_KEY = "ghp_12345FAKESECRET67890TOKEN";
+import DOMPurify from "dompurify";
+import { Helmet } from "react-helmet";
 
 const VulnerableComponent: React.FC = () => {
   const [userInput, setUserInput] = useState("");
   const [data, setData] = useState<unknown>(null);
 
-  // 🚨 Insecure API call with hardcoded token
   const fetchData = async () => {
     try {
       const res = await fetch(
-        `https://api.example.com/data?query=${userInput}&apikey=${API_KEY}`
+        `/api/data?query=${encodeURIComponent(userInput)}`
       );
       const result = await res.json();
       setData(result);
@@ -23,9 +21,7 @@ const VulnerableComponent: React.FC = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const res = await fetch(
-          `https://api.example.com/data?query=&apikey=${API_KEY}`
-        );
+        const res = await fetch(`/api/data?query=`);
         const result = await res.json();
         setData(result);
       } catch (error) {
@@ -36,10 +32,10 @@ const VulnerableComponent: React.FC = () => {
     loadData();
   }, []);
 
-  // 🚨 Dangerous eval usage
   const runEval = () => {
     try {
-      eval(userInput); // ❌ Code injection risk
+      const parsed = JSON.parse(userInput);
+      console.log(parsed);
     } catch (e) {
       console.error(e);
     }
@@ -47,9 +43,18 @@ const VulnerableComponent: React.FC = () => {
 
   return (
     <div>
+      <Helmet>
+        <meta
+          http-equiv="Content-Security-Policy"
+          content="default-src 'self'; script-src 'self'; style-src 'self'; object-src 'none';"
+        />
+        <meta http-equiv="X-Frame-Options" content="DENY" />
+        <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+        <meta name="referrer" content="strict-origin-when-cross-origin" />
+        <meta http-equiv="Permissions-Policy" content="geolocation=(self)" />
+      </Helmet>
       <h2>⚠️ Vulnerable Component</h2>
 
-      {/* 🚨 No input validation */}
       <input
         type="text"
         value={userInput}
@@ -61,15 +66,7 @@ const VulnerableComponent: React.FC = () => {
 
       <button onClick={runEval}>Run Eval</button>
 
-      {/* 🚨 XSS vulnerability */}
-      <div
-        dangerouslySetInnerHTML={{
-          __html: userInput // ❌ Directly rendering user input
-        }}
-      />
-
-      {/* 🚨 Logging sensitive info */}
-      <pre>{JSON.stringify(data)}</pre>
+      <div>{userInput}</div>
     </div>
   );
 };
