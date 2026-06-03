@@ -1,17 +1,17 @@
-import React, { useState, useEffect, useMemo } from "react";
-import DOMPurify from "dompurify";
-import { Helmet } from "react-helmet";
+import React, { useState, useEffect } from "react";
 
-const API_KEY = process.env.REACT_APP_API_KEY || "";
+// 🚨 Hardcoded secret (security issue)
+const API_KEY = "ghp_12345FAKESECRET67890TOKEN";
 
 const VulnerableComponent: React.FC = () => {
   const [userInput, setUserInput] = useState("");
   const [data, setData] = useState<unknown>(null);
 
+  // 🚨 Insecure API call with hardcoded token
   const fetchData = async () => {
     try {
       const res = await fetch(
-        `https://api.example.com/data?query=${encodeURIComponent(userInput)}&apikey=${API_KEY}`
+        `https://api.example.com/data?query=${userInput}&apikey=${API_KEY}`
       );
       const result = await res.json();
       setData(result);
@@ -36,49 +36,41 @@ const VulnerableComponent: React.FC = () => {
     loadData();
   }, []);
 
-  function handleInput(input: string) {
-    // parse and process input safely
-    console.log("Processed input:", input);
-  }
-
+  // 🚨 Dangerous eval usage
   const runEval = () => {
     try {
-      handleInput(userInput);
+      eval(userInput); // ❌ Code injection risk
     } catch (e) {
       console.error(e);
     }
   };
 
-  const safeData = useMemo(() => {
-    if (data && typeof data === "object") {
-      return { publicField: (data as any).publicField };
-    }
-    return {};
-  }, [data]);
-
   return (
-    <>
-      <Helmet>
-        <meta httpEquiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self';" />
-        <meta httpEquiv="X-Frame-Options" content="DENY" />
-        <meta httpEquiv="X-Content-Type-Options" content="nosniff" />
-        <meta name="Referrer-Policy" content="no-referrer" />
-        <meta httpEquiv="Permissions-Policy" content="camera=(), microphone=()" />
-      </Helmet>
-      <div>
-        <h2>⚠️ Vulnerable Component</h2>
-        <input
-          type="text"
-          value={userInput}
-          onChange={(e) => setUserInput(e.target.value)}
-          placeholder="Enter something"
-        />
-        <button onClick={fetchData}>Fetch Data</button>
-        <button onClick={runEval}>Run Eval</button>
-        <div>{DOMPurify.sanitize(userInput)}</div>
-        <pre>{JSON.stringify(safeData)}</pre>
-      </div>
-    </>
+    <div>
+      <h2>⚠️ Vulnerable Component</h2>
+
+      {/* 🚨 No input validation */}
+      <input
+        type="text"
+        value={userInput}
+        onChange={(e) => setUserInput(e.target.value)}
+        placeholder="Enter something"
+      />
+
+      <button onClick={fetchData}>Fetch Data</button>
+
+      <button onClick={runEval}>Run Eval</button>
+
+      {/* 🚨 XSS vulnerability */}
+      <div
+        dangerouslySetInnerHTML={{
+          __html: userInput // ❌ Directly rendering user input
+        }}
+      />
+
+      {/* 🚨 Logging sensitive info */}
+      <pre>{JSON.stringify(data)}</pre>
+    </div>
   );
 };
 
